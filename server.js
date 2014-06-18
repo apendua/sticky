@@ -5,13 +5,6 @@ var pathPrefix = process.env.ROOT_URL_PATH_PREFIX || "";
 var _ = require('underscore');
 var sockjs = require('sockjs');
 
-var unique = function () {
-  if (!unique.counter) {
-    unique.counter = 0;
-  }
-  return unique.counter++;
-};
-
 var StickyServer = function (httpServer, stickyOptions) {
   var self = this;
   self.open_sockets = [];
@@ -64,7 +57,6 @@ var StickyServer = function (httpServer, stickyOptions) {
     // XXX the ping option is critical! without this, the proxy might be disconnected due
     //     due to load balancer timeouts!!! and we would need to resend all data every few seconds
     var proxy = new WebSocket.Client(stickyOptions.endpoint, [], { ping: 1 });
-    var id    = unique();
 
     self.open_sockets.push(socket);
 
@@ -115,12 +107,9 @@ _.extend(StickyServer.prototype, {
 
 });
 
-//----------------------------------
+//-----------------------------------------
 var server = new StickyServer(httpServer, {
-  endpoint: 'ws://localhost:3000/websocket'
+  endpoint: process.env.STICKY_ENDPOINT
 });
 
-httpServer.listen(4000);
-
-
-
+httpServer.listen(process.env.PORT);
