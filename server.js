@@ -1,11 +1,14 @@
 var http = require('http');
-var httpServer = http.createServer();
 var WebSocket = require('faye-websocket');
 var pathPrefix = process.env.ROOT_URL_PATH_PREFIX || "";
 var _ = require('underscore');
 var sockjs = require('sockjs');
+var connect = require('connect');
+var url = require('url');
 
-var StickyServer = function (httpServer, stickyOptions) {
+var debugLog = process.env.STICKY_DEBUG ? _.bind(console.log, console) : function () {};
+
+var StickyServer = function (stickyOptions) {
   var self = this;
   self.open_sockets = [];
 
@@ -41,7 +44,10 @@ var StickyServer = function (httpServer, stickyOptions) {
   //  options.websocket = false;
 
   self.server = sockjs.createServer(options);
-  self.server.installHandlers(httpServer);
+
+  self.middleware = function () {
+    return self.server.middleware();
+  };
 
   //Package.webapp.WebApp.httpServer.on('meteor-closing', function () {
   //  _.each(self.open_sockets, function (socket) {
@@ -63,14 +69,14 @@ var StickyServer = function (httpServer, stickyOptions) {
     // ORIGINAL SOCKET
 
     socket.on('close', function () {
-      //console.log('closing client');
+      debugLog('closing client');
       self.open_sockets = _.without(self.open_sockets, socket);
       proxy && proxy.close();
       socket = null;
     });
 
     socket.on('data', function(message) {
-      //console.log('=>', message);
+      debugLog('=>', message);
       proxy && proxy.send(message);
     });
 
@@ -81,7 +87,7 @@ var StickyServer = function (httpServer, stickyOptions) {
     });
 
     proxy.on('close', function (event) {
-      //console.log('closing proxy connection');
+      debugLog('closing proxy connection');
       self.open_sockets = _.without(self.open_sockets, proxy);
       // XXX I am not 100% sure we should close it, what about reconnecting?
       socket && socket.close(event.code, event.reason);
@@ -89,7 +95,7 @@ var StickyServer = function (httpServer, stickyOptions) {
     });
 
     proxy.on('message', function(event) {
-      //console.log('<=', event.data);
+      debugLog('<=', event.data);
       socket && socket.write(event.data);
     });
 
@@ -108,8 +114,24 @@ _.extend(StickyServer.prototype, {
 });
 
 //-----------------------------------------
-var server = new StickyServer(httpServer, {
+
+var server = new StickyServer({
   endpoint: process.env.STICKY_ENDPOINT
 });
 
-httpServer.listen(process.env.PORT);
+var endpointHost =  url.parse(process.env.STICKY_ENDPOINT).host;
+
+var app = connect()
+  .use(function (req, res, next) {
+    if (url.parse(req.headers.origin).host !== endpointHost) {
+      res.statusCode = 403;
+      res.end();
+    } else {
+      next();
+    }
+  })
+  .use(server.middleware());
+
+http.createServer(app).listen(process.env.PORT);
+
+

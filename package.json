@@ -2,8 +2,9 @@
   "name": "sticky-proxy",
   "version": "0.0.1",
   "dependencies": {
-    "underscore": "1.*",
-    "faye-websocket": "0.7.*",
+    "connect": "2.x",
+    "underscore": "1.x",
+    "faye-websocket": "0.7.x",
     "sockjs": "0.3.9"
   },
   "main": "server.js",
