@@ -63,14 +63,14 @@ var StickyServer = function (httpServer, stickyOptions) {
     // ORIGINAL SOCKET
 
     socket.on('close', function () {
-      console.log('closing client');
+      //console.log('closing client');
       self.open_sockets = _.without(self.open_sockets, socket);
       proxy && proxy.close();
       socket = null;
     });
 
     socket.on('data', function(message) {
-      console.log('=>', message);
+      //console.log('=>', message);
       proxy && proxy.send(message);
     });
 
@@ -81,7 +81,7 @@ var StickyServer = function (httpServer, stickyOptions) {
     });
 
     proxy.on('close', function (event) {
-      console.log('closing proxy connection');
+      //console.log('closing proxy connection');
       self.open_sockets = _.without(self.open_sockets, proxy);
       // XXX I am not 100% sure we should close it, what about reconnecting?
       socket && socket.close(event.code, event.reason);
@@ -89,7 +89,7 @@ var StickyServer = function (httpServer, stickyOptions) {
     });
 
     proxy.on('message', function(event) {
-      console.log('<=', event.data);
+      //console.log('<=', event.data);
       socket && socket.write(event.data);
     });
 
